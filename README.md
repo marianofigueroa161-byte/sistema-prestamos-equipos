@@ -1,4 +1,4 @@
-# Sistema de Préstamos de Equipos Tecnológicos
+# Gestión de Préstamos de Equipos Tecnológicos
 
 Aplicación web desarrollada para registrar y controlar el préstamo de laptops, proyectores, tablets, monitores y otros equipos tecnológicos.
 
