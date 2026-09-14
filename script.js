@@ -10,6 +10,7 @@ const fields = {
   type: document.querySelector("#type"),
   model: document.querySelector("#model"),
   responsible: document.querySelector("#responsible"),
+  area: document.querySelector("#area"),
   loanDate: document.querySelector("#loanDate"),
   returnDate: document.querySelector("#returnDate"),
   status: document.querySelector("#status"),
@@ -77,30 +78,44 @@ function notify(message) {
 }
 
 function updateStats() {
-  document.querySelector("#totalCount").textContent = equipment.length;
+  document.querySelector("#totalCount").textContent =
+    equipment.length;
 
   document.querySelector("#availableCount").textContent =
-    equipment.filter((item) => item.status === "Disponible").length;
+    equipment.filter(
+      (item) => item.status === "Disponible"
+    ).length;
 
   document.querySelector("#loanedCount").textContent =
-    equipment.filter((item) => item.status === "Prestado").length;
+    equipment.filter(
+      (item) => item.status === "Prestado"
+    ).length;
 
   document.querySelector("#maintenanceCount").textContent =
-    equipment.filter((item) => item.status === "Mantenimiento").length;
+    equipment.filter(
+      (item) => item.status === "Mantenimiento"
+    ).length;
 }
 
 function render() {
-  const searchValue = document.querySelector("#searchInput").value;
+  const searchValue =
+    document.querySelector("#searchInput").value;
+
   const query = normalize(searchValue);
-  const filter = document.querySelector("#statusFilter").value;
+
+  const filter =
+    document.querySelector("#statusFilter").value;
 
   const filteredEquipment = equipment.filter((item) => {
     const matchesSearch = [
       item.code,
       item.type,
       item.model,
-      item.responsible
-    ].some((value) => normalize(value || "").includes(query));
+      item.responsible,
+      item.area
+    ].some((value) =>
+      normalize(value || "").includes(query)
+    );
 
     const matchesStatus =
       filter === "Todos" ||
@@ -155,7 +170,14 @@ function render() {
 
             <p>
               <strong>Responsable:</strong>
-              ${escapeHTML(item.responsible || "Sin asignar")}
+              ${escapeHTML(
+                item.responsible || "Sin asignar"
+              )}
+            </p>
+
+            <p>
+              <strong>Área solicitante:</strong>
+              ${escapeHTML(item.area || "Sin área")}
             </p>
 
             <p>
@@ -203,7 +225,10 @@ form.addEventListener("submit", (event) => {
     ])
   );
 
-  if (data.status === "Prestado" && !data.responsible) {
+  if (
+    data.status === "Prestado" &&
+    !data.responsible
+  ) {
     notify("Ingresa el responsable del préstamo");
     fields.responsible.focus();
     return;
