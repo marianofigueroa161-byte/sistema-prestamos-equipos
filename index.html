@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Préstamos de Equipos Tecnológicos</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <p class="eyebrow">CONTROL TECNOLÓGICO</p>
+      <h1>Sistema de Préstamos de Equipos</h1>
+    </div>
+    <span class="hero-icon" aria-hidden="true">▣</span>
+  </header>
+  <main class="container">
+    <section class="stats" aria-label="Resumen">
+      <article><span>Total</span><strong id="totalCount">0</strong></article>
+      <article><span>Disponibles</span><strong id="availableCount">0</strong></article>
+      <article><span>Prestados</span><strong id="loanedCount">0</strong></article>
+      <article><span>Mantenimiento</span><strong id="maintenanceCount">0</strong></article>
+    </section>
+    <section class="workspace">
+      <article class="panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">NUEVO REGISTRO</p><h2 id="formTitle">Registrar equipo</h2></div>
+        </div>
+        <form id="equipmentForm">
+          <input type="hidden" id="editingId">
+          <div class="field-grid">
+            <label>Código del equipo<input id="code" required maxlength="20" placeholder="EQ-001"></label>
+            <label>Tipo de equipo
+              <select id="type" required>
+                <option value="">Seleccionar</option><option>Laptop</option><option>Proyector</option><option>Tablet</option><option>Monitor</option><option>Accesorio</option><option>Otro</option>
+              </select>
+            </label>
+          </div>
+          <label>Marca y modelo<input id="model" required maxlength="60" placeholder="Lenovo ThinkPad E14"></label>
+          <label>Responsable<input id="responsible" maxlength="70" placeholder="Nombre de quien recibe el equipo"></label>
+          <div class="field-grid">
+            <label>Fecha de préstamo<input id="loanDate" type="date"></label>
+            <label>Fecha prevista de devolución<input id="returnDate" type="date"></label>
+          </div>
+          <label>Estado
+            <select id="status" required>
+              <option value="Disponible">Disponible</option><option value="Prestado">Prestado</option><option value="Mantenimiento">Mantenimiento</option>
+            </select>
+          </label>
+          <label>Observaciones<textarea id="notes" rows="3" maxlength="250" placeholder="Estado físico, accesorios entregados u otra información"></textarea></label>
+          <div class="actions">
+            <button class="primary" type="submit" id="saveButton">Guardar equipo</button>
+            <button class="secondary hidden" type="button" id="cancelButton">Cancelar edición</button>
+          </div>
+        </form>
+      </article>
+      <article class="panel list-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">INVENTARIO</p><h2>Equipos registrados</h2></div>
+          <button class="danger-outline" id="clearButton" type="button">Limpiar todo</button>
+        </div>
+        <div class="filters">
+          <input id="searchInput" type="search" placeholder="Buscar por código, equipo o responsable">
+          <select id="statusFilter">
+            <option value="Todos">Todos los estados</option><option value="Disponible">Disponibles</option><option value="Prestado">Prestados</option><option value="Mantenimiento">En mantenimiento</option>
+          </select>
+        </div>
+        <div id="emptyState" class="empty-state"><span>⌕</span><h3>No hay equipos registrados</h3><p>Completa el formulario para crear el primer registro.</p></div>
+        <div id="equipmentList" class="equipment-list"></div>
+      </article>
+    </section>
+  </main>
+  <div id="notification" class="notification" role="status" aria-live="polite"></div>
+  <script src="script.js"></script>
+</body>
+</html>
