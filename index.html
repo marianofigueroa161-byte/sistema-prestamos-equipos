@@ -86,6 +86,20 @@
               placeholder="Nombre de quien recibe el equipo"
             >
           </label>
+          <label>
+            Área solicitante
+            <select id="area" required>
+              <option value="">Seleccionar área</option>
+              <option value="Administración">Administración</option>
+              <option value="Contabilidad">Contabilidad</option>
+              <option value="Recursos Humanos">Recursos Humanos</option>
+              <option value="Tecnologías de Información">
+                Tecnologías de Información
+              </option>
+              <option value="Logística">Logística</option>
+              <option value="Otra">Otra</option>
+            </select>
+          </label>
           <div class="field-grid">
             <label>
               Fecha de préstamo
@@ -133,7 +147,11 @@
             <p class="eyebrow">INVENTARIO</p>
             <h2>Equipos registrados</h2>
           </div>
-          <button class="danger-outline" id="clearButton" type="button">
+          <button
+            class="danger-outline"
+            id="clearButton"
+            type="button"
+          >
             Limpiar todo
           </button>
         </div>
@@ -141,7 +159,7 @@
           <input
             id="searchInput"
             type="search"
-            placeholder="Buscar por código, equipo o responsable"
+            placeholder="Buscar por código, equipo, responsable o área"
           >
           <select id="statusFilter">
             <option value="Todos">Todos los estados</option>
@@ -154,9 +172,10 @@
         <div id="emptyState" class="empty-state">
           <span>⌕</span>
           <h3>No hay equipos registrados</h3>
-          <p>Completa el formulario para crear el primer registro.</p>
+          <p>
+            Completa el formulario para crear el primer registro.
+          </p>
         </div>
-
         <div id="equipmentList" class="equipment-list"></div>
       </article>
     </section>
