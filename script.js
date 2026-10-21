@@ -1,396 +1,187 @@
-const STORAGE_KEY = "prestamosEquiposTecnologicos";
-
-let equipment = loadEquipment();
-
-const form = document.querySelector("#equipmentForm");
-
-const fields = {
-  editingId: document.querySelector("#editingId"),
-  code: document.querySelector("#code"),
-  type: document.querySelector("#type"),
-  model: document.querySelector("#model"),
-  responsible: document.querySelector("#responsible"),
-  area: document.querySelector("#area"),
-  loanDate: document.querySelector("#loanDate"),
-  returnDate: document.querySelector("#returnDate"),
-  status: document.querySelector("#status"),
-  notes: document.querySelector("#notes")
-};
-
-function loadEquipment() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-  } catch (error) {
-    return [];
-  }
+"use strict";
+const EQUIPMENT_KEY="equipmentLoanSystem.equipment.v2";
+const HISTORY_KEY="equipmentLoanSystem.history.v2";
+const $=selector=>document.querySelector(selector);
+const form=$("#equipmentForm");
+const fields={code:$("#code"),type:$("#type"),brand:$("#brand"),model:$("#model"),responsible:$("#responsible"),area:$("#area"),loanDate:$("#loanDate"),dueDate:$("#dueDate"),status:$("#status"),notes:$("#notes")};
+let equipment=read(EQUIPMENT_KEY);
+let history=read(HISTORY_KEY);
+let editingId=null;
+function read(key){
+try{
+const value=JSON.parse(localStorage.getItem(key));
+return Array.isArray(value)?value:[];
+}catch{
+return[];
 }
-
-function saveEquipment() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(equipment));
 }
-
-function normalize(value) {
-  return value
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+function write(){
+localStorage.setItem(EQUIPMENT_KEY,JSON.stringify(equipment));
+localStorage.setItem(HISTORY_KEY,JSON.stringify(history));
 }
-
-function escapeHTML(value = "") {
-  const element = document.createElement("div");
-  element.textContent = value;
-  return element.innerHTML;
+function normalize(value){
+return String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
 }
-
-function formatDate(value) {
-  if (!value) {
-    return "Sin fecha";
-  }
-
-  return new Date(`${value}T00:00:00`).toLocaleDateString("es-PE");
+function today(){
+const date=new Date();
+date.setMinutes(date.getMinutes()-date.getTimezoneOffset());
+return date.toISOString().slice(0,10);
 }
-
-function isOverdue(item) {
-  if (item.status !== "Prestado" || !item.returnDate) {
-    return false;
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const returnDate = new Date(`${item.returnDate}T00:00:00`);
-
-  return returnDate < today;
+function generateId(){
+return Date.now().toString(36)+Math.random().toString(36).slice(2);
 }
-
-function notify(message) {
-  const notification = document.querySelector("#notification");
-
-  notification.textContent = message;
-  notification.classList.add("show");
-
-  clearTimeout(notify.timer);
-
-  notify.timer = setTimeout(() => {
-    notification.classList.remove("show");
-  }, 2400);
+function overdue(item){
+return item.status==="Prestado"&&item.dueDate&&item.dueDate<today();
 }
-
-function updateStats() {
-  document.querySelector("#totalCount").textContent =
-    equipment.length;
-
-  document.querySelector("#availableCount").textContent =
-    equipment.filter(
-      (item) => item.status === "Disponible"
-    ).length;
-
-  document.querySelector("#loanedCount").textContent =
-    equipment.filter(
-      (item) => item.status === "Prestado"
-    ).length;
-
-  document.querySelector("#maintenanceCount").textContent =
-    equipment.filter(
-      (item) => item.status === "Mantenimiento"
-    ).length;
+function validate(data){
+if(!data.code||!data.type||!data.brand||!data.model)return"Complete los datos obligatorios del equipo.";
+if(data.status==="Prestado"&&(!data.responsible||!data.area||!data.loanDate||!data.dueDate))return"Un préstamo requiere responsable, área y ambas fechas.";
+if(data.loanDate&&data.dueDate&&data.dueDate<data.loanDate)return"La devolución prevista no puede ser anterior al préstamo.";
+if(equipment.some(item=>normalize(item.code)===normalize(data.code)&&item.id!==editingId))return"El código ya está registrado.";
+return"";
 }
-
-function render() {
-  const searchValue =
-    document.querySelector("#searchInput").value;
-
-  const query = normalize(searchValue);
-
-  const filter =
-    document.querySelector("#statusFilter").value;
-
-  const filteredEquipment = equipment.filter((item) => {
-    const matchesSearch = [
-      item.code,
-      item.type,
-      item.model,
-      item.responsible,
-      item.area
-    ].some((value) =>
-      normalize(value || "").includes(query)
-    );
-
-    const matchesStatus =
-      filter === "Todos" ||
-      item.status === filter ||
-      (filter === "Vencido" && isOverdue(item));
-
-    return matchesSearch && matchesStatus;
-  });
-
-  const list = document.querySelector("#equipmentList");
-  const emptyState = document.querySelector("#emptyState");
-
-  emptyState.classList.toggle(
-    "hidden",
-    filteredEquipment.length > 0
-  );
-
-  list.innerHTML = filteredEquipment
-    .map((item) => {
-      const overdueBadge = isOverdue(item)
-        ? '<span class="badge mantenimiento">Vencido</span>'
-        : "";
-
-      const observations = item.notes
-        ? `
-          <p>
-            <strong>Observaciones:</strong>
-            ${escapeHTML(item.notes)}
-          </p>
-        `
-        : "";
-
-      return `
-        <article class="equipment-card">
-          <div>
-            <div class="meta">
-              <span class="badge type">
-                ${escapeHTML(item.type)}
-              </span>
-
-              <span class="badge ${normalize(item.status)}">
-                ${escapeHTML(item.status)}
-              </span>
-
-              ${overdueBadge}
-            </div>
-
-            <h3>
-              ${escapeHTML(item.code)} ·
-              ${escapeHTML(item.model)}
-            </h3>
-
-            <p>
-              <strong>Responsable:</strong>
-              ${escapeHTML(
-                item.responsible || "Sin asignar"
-              )}
-            </p>
-
-            <p>
-              <strong>Área solicitante:</strong>
-              ${escapeHTML(item.area || "Sin área")}
-            </p>
-
-            <p>
-              <strong>Préstamo:</strong>
-              ${formatDate(item.loanDate)}
-              ·
-              <strong>Devolución:</strong>
-              ${formatDate(item.returnDate)}
-            </p>
-
-            ${observations}
-          </div>
-
-          <div class="card-actions">
-            <button
-              type="button"
-              onclick="editEquipment('${item.id}')"
-            >
-              Editar
-            </button>
-
-            <button
-              type="button"
-              class="delete"
-              onclick="deleteEquipment('${item.id}')"
-            >
-              Eliminar
-            </button>
-          </div>
-        </article>
-      `;
-    })
-    .join("");
-
-  updateStats();
+function formData(){
+return Object.fromEntries(Object.entries(fields).map(([key,input])=>[key,input.value.trim()]));
 }
-
-form.addEventListener("submit", (event) => {
-  event.preventDefault();
-
-  const data = Object.fromEntries(
-    Object.entries(fields).map(([key, input]) => [
-      key,
-      input.value.trim()
-    ])
-  );
-
-  if (
-    data.status === "Prestado" &&
-    !data.responsible
-  ) {
-    notify("Ingresa el responsable del préstamo");
-    fields.responsible.focus();
-    return;
-  }
-
-  if (
-    data.loanDate &&
-    data.returnDate &&
-    data.returnDate < data.loanDate
-  ) {
-    notify(
-      "La devolución no puede ser anterior al préstamo"
-    );
-    return;
-  }
-
-  const duplicatedCode = equipment.some(
-    (item) =>
-      normalize(item.code) === normalize(data.code) &&
-      item.id !== data.editingId
-  );
-
-  if (duplicatedCode) {
-    notify("El código del equipo ya existe");
-    fields.code.focus();
-    return;
-  }
-
-  if (data.editingId) {
-    equipment = equipment.map((item) =>
-      item.id === data.editingId
-        ? {
-            ...item,
-            ...data,
-            updatedAt: new Date().toISOString()
-          }
-        : item
-    );
-
-    notify("Equipo actualizado correctamente");
-  } else {
-    const id =
-      typeof crypto !== "undefined" &&
-      typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : Date.now().toString();
-
-    equipment.unshift({
-      ...data,
-      id,
-      createdAt: new Date().toISOString()
-    });
-
-    notify("Equipo registrado correctamente");
-  }
-
-  saveEquipment();
-  resetForm();
-  render();
+function resetForm(){
+form.reset();
+fields.status.value="Disponible";
+editingId=null;
+$("#formTitle").textContent="Nuevo equipo";
+$("#submitButton").textContent="Guardar equipo";
+$("#cancelButton").classList.add("hidden");
+$("#formMessage").textContent="";
+}
+function updateStats(){
+$("#totalCount").textContent=equipment.length;
+$("#availableCount").textContent=equipment.filter(item=>item.status==="Disponible").length;
+$("#loanedCount").textContent=equipment.filter(item=>item.status==="Prestado").length;
+$("#overdueCount").textContent=equipment.filter(overdue).length;
+$("#maintenanceCount").textContent=equipment.filter(item=>item.status==="Mantenimiento").length;
+}
+function escapeText(value){
+const node=document.createElement("span");
+node.textContent=value??"";
+return node.innerHTML;
+}
+function equipmentCard(item){
+const isOverdue=overdue(item);
+const card=document.createElement("article");
+card.className=`record-card${isOverdue?" overdue":""}`;
+const statusClasses={Disponible:"available",Prestado:"loaned",Mantenimiento:"maintenance"};
+const statusClass=isOverdue?"overdue":statusClasses[item.status];
+card.innerHTML=`<div class="record-top"><div><h3 class="record-title">${escapeText(item.code)} · ${escapeText(item.type)} ${escapeText(item.brand)} ${escapeText(item.model)}</h3><div class="badges"><span class="badge ${statusClass}">${isOverdue?"Vencido":escapeText(item.status)}</span></div></div></div><div class="record-meta"><span><strong>Responsable:</strong> ${escapeText(item.responsible||"No asignado")}</span><span><strong>Área:</strong> ${escapeText(item.area||"No asignada")}</span><span><strong>Préstamo:</strong> ${escapeText(item.loanDate||"-")}</span><span><strong>Devolución prevista:</strong> ${escapeText(item.dueDate||"-")}</span><span><strong>Observaciones:</strong> ${escapeText(item.notes||"Sin observaciones")}</span></div><div class="record-actions"><button class="secondary" data-action="edit" data-id="${item.id}">Editar</button>${item.status==="Prestado"?`<button class="success" data-action="return" data-id="${item.id}">Registrar devolución</button>`:""}<button class="danger" data-action="delete" data-id="${item.id}">Eliminar</button></div>`;
+return card;
+}
+function renderEquipment(){
+updateStats();
+const query=normalize($("#equipmentSearch").value);
+const filter=$("#statusFilter").value;
+const items=equipment.filter(item=>{
+const text=normalize([item.code,item.type,item.brand,item.model,item.responsible,item.area].join(" "));
+const statusMatch=filter==="Todos"||(filter==="Vencido"?overdue(item):item.status===filter);
+return text.includes(query)&&statusMatch;
 });
-
-window.editEquipment = function (id) {
-  const item = equipment.find(
-    (record) => record.id === id
-  );
-
-  if (!item) {
-    return;
-  }
-
-  Object.entries(fields).forEach(([key, input]) => {
-    input.value = item[key] || "";
-  });
-
-  document.querySelector("#formTitle").textContent =
-    "Editar equipo";
-
-  document.querySelector("#saveButton").textContent =
-    "Guardar cambios";
-
-  document
-    .querySelector("#cancelButton")
-    .classList.remove("hidden");
-
-  window.scrollTo({
-    top: 130,
-    behavior: "smooth"
-  });
-};
-
-window.deleteEquipment = function (id) {
-  const item = equipment.find(
-    (record) => record.id === id
-  );
-
-  if (!item) {
-    return;
-  }
-
-  const confirmed = confirm(
-    `¿Eliminar el equipo ${item.code}?`
-  );
-
-  if (confirmed) {
-    equipment = equipment.filter(
-      (record) => record.id !== id
-    );
-
-    saveEquipment();
-    render();
-    notify("Equipo eliminado");
-  }
-};
-
-function resetForm() {
-  form.reset();
-
-  fields.editingId.value = "";
-  fields.status.value = "Disponible";
-
-  document.querySelector("#formTitle").textContent =
-    "Registrar equipo";
-
-  document.querySelector("#saveButton").textContent =
-    "Guardar equipo";
-
-  document
-    .querySelector("#cancelButton")
-    .classList.add("hidden");
+const list=$("#equipmentList");
+list.textContent="";
+items.forEach(item=>list.appendChild(equipmentCard(item)));
 }
-
-document
-  .querySelector("#cancelButton")
-  .addEventListener("click", resetForm);
-
-document
-  .querySelector("#searchInput")
-  .addEventListener("input", render);
-
-document
-  .querySelector("#statusFilter")
-  .addEventListener("change", render);
-
-document
-  .querySelector("#clearButton")
-  .addEventListener("click", () => {
-    if (equipment.length === 0) {
-      notify("No existen registros para eliminar");
-      return;
-    }
-
-    const confirmed = confirm(
-      "¿Eliminar todos los registros?"
-    );
-
-    if (confirmed) {
-      equipment = [];
-      saveEquipment();
-      resetForm();
-      render();
-      notify("Todos los registros fueron eliminados");
-    }
-  });
-
-render();
+function historyCard(item){
+const card=document.createElement("article");
+card.className="record-card history";
+card.innerHTML=`<div class="record-top"><h3 class="record-title">${escapeText(item.code)} · ${escapeText(item.type)} ${escapeText(item.brand)} ${escapeText(item.model)}</h3><span class="badge ${item.result==="Devuelto con retraso"?"overdue":"available"}">${escapeText(item.result)}</span></div><div class="record-meta"><span><strong>Responsable:</strong> ${escapeText(item.responsible)}</span><span><strong>Área:</strong> ${escapeText(item.area)}</span><span><strong>Préstamo:</strong> ${escapeText(item.loanDate)}</span><span><strong>Fecha prevista:</strong> ${escapeText(item.dueDate)}</span><span><strong>Devolución real:</strong> ${escapeText(item.returnDate)}</span><span><strong>Observaciones:</strong> ${escapeText(item.notes||"Sin observaciones")}</span></div>`;
+return card;
+}
+function renderHistory(){
+const query=normalize($("#historySearch").value);
+const filter=$("#historyFilter").value;
+const items=history.filter(item=>{
+const text=normalize([item.code,item.type,item.brand,item.model,item.responsible,item.area].join(" "));
+return text.includes(query)&&(filter==="Todos"||item.result===filter);
+});
+const list=$("#historyList");
+list.textContent="";
+items.forEach(item=>list.appendChild(historyCard(item)));
+}
+function editItem(id){
+const item=equipment.find(entry=>entry.id===id);
+if(!item)return;
+Object.entries(fields).forEach(([key,input])=>{
+input.value=item[key]??"";
+});
+editingId=id;
+$("#formTitle").textContent="Editar equipo";
+$("#submitButton").textContent="Guardar cambios";
+$("#cancelButton").classList.remove("hidden");
+form.scrollIntoView({behavior:"smooth"});
+}
+function returnItem(id){
+const item=equipment.find(entry=>entry.id===id);
+if(!item||item.status!=="Prestado")return;
+const returnDate=prompt("Ingrese la fecha real de devolución:",today());
+if(returnDate===null)return;
+if(!/^\d{4}-\d{2}-\d{2}$/.test(returnDate)||returnDate<item.loanDate){
+alert("Ingrese una fecha válida que no sea anterior al préstamo.");
+return;
+}
+history.unshift({...item,historyId:generateId(),returnDate,result:returnDate>item.dueDate?"Devuelto con retraso":"Devuelto a tiempo"});
+Object.assign(item,{status:"Disponible",responsible:"",area:"",loanDate:"",dueDate:""});
+write();
+renderAll();
+}
+function deleteItem(id){
+const item=equipment.find(entry=>entry.id===id);
+if(item&&confirm(`¿Eliminar el equipo ${item.code}?`)){
+equipment=equipment.filter(entry=>entry.id!==id);
+write();
+renderAll();
+}
+}
+function renderAll(){
+renderEquipment();
+renderHistory();
+}
+form.addEventListener("submit",event=>{
+event.preventDefault();
+const data=formData();
+const error=validate(data);
+$("#formMessage").textContent=error;
+if(error)return;
+if(editingId){
+const item=equipment.find(entry=>entry.id===editingId);
+if(item)Object.assign(item,data);
+}else{
+equipment.unshift({...data,id:generateId(),createdAt:new Date().toISOString()});
+}
+write();
+resetForm();
+renderAll();
+});
+$("#status").addEventListener("change",()=>{
+if(fields.status.value!=="Prestado"){
+fields.responsible.value="";
+fields.area.value="";
+fields.loanDate.value="";
+fields.dueDate.value="";
+}
+});
+$("#cancelButton").addEventListener("click",resetForm);
+$("#equipmentList").addEventListener("click",event=>{
+const button=event.target.closest("button[data-action]");
+if(!button)return;
+const actions={edit:editItem,return:returnItem,delete:deleteItem};
+const action=actions[button.dataset.action];
+if(action)action(button.dataset.id);
+});
+$("#equipmentSearch").addEventListener("input",renderEquipment);
+$("#statusFilter").addEventListener("change",renderEquipment);
+$("#historySearch").addEventListener("input",renderHistory);
+$("#historyFilter").addEventListener("change",renderHistory);
+$("#clearHistoryButton").addEventListener("click",()=>{
+if(history.length&&confirm("¿Eliminar todo el historial de devoluciones?")){
+history=[];
+write();
+renderHistory();
+}
+});
+renderAll();
